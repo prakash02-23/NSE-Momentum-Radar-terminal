@@ -235,122 +235,120 @@ def fetch_stock_data(symbol):
 
 def calculate_metrics(df):
 
-    latest_close = float(df["Close"].iloc[-1])
-    prev_close = float(df["Close"].iloc[-2])
+    try:
 
-    price_change = (
-        (latest_close - prev_close) / prev_close
-    ) * 100
+        # FIX MULTIINDEX COLUMNS
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
 
-    volume_avg = df["Volume"].rolling(20).mean().iloc[-1]
-    current_volume = df["Volume"].iloc[-1]
+        latest_close = float(df["Close"].values[-1])
+        prev_close = float(df["Close"].values[-2])
 
-    if volume_avg == 0:
-        relative_volume = 1
-    else:
-        relative_volume = current_volume / volume_avg
+        price_change = (
+            (latest_close - prev_close) / prev_close
+        ) * 100
 
-    ema20 = df["Close"].ewm(span=20).mean().iloc[-1]
+        volume_avg = df["Volume"].rolling(20).mean().values[-1]
+        current_volume = float(df["Volume"].values[-1])
 
-    breakout_high = df["High"].rolling(20).max().iloc[-2]
+        if volume_avg == 0 or np.isnan(volume_avg):
+            relative_volume = 1
+        else:
+            relative_volume = current_volume / volume_avg
 
-    breakout_distance = (
-        latest_close / breakout_high
-    ) * 100
+        ema20 = float(
+            df["Close"].ewm(span=20).mean().values[-1]
+        )
 
-    # VWAP
-    typical_price = (
-        df["High"] +
-        df["Low"] +
-        df["Close"]
-    ) / 3
+        breakout_high = float(
+            df["High"].rolling(20).max().values[-2]
+        )
 
-    vwap = (
-        (typical_price * df["Volume"]).cumsum() /
-        df["Volume"].cumsum()
-    ).iloc[-1]
+        breakout_distance = (
+            latest_close / breakout_high
+        ) * 100
 
-    # MOMENTUM SCORE
-    score = 0
+        # VWAP
+        typical_price = (
+            df["High"] +
+            df["Low"] +
+            df["Close"]
+        ) / 3
 
-    # Price Momentum
-    if price_change > 0:
-        score += min(price_change * 10, 30)
+        vwap = float(
+            (
+                (typical_price * df["Volume"]).cumsum() /
+                df["Volume"].cumsum()
+            ).values[-1]
+        )
 
-    # Relative Volume
-    score += min(relative_volume * 15, 25)
+        # MOMENTUM SCORE
+        score = 0
 
-    # Breakout
-    if breakout_distance > 98:
-        score += 20
+        # Price Momentum
+        if price_change > 0:
+            score += min(price_change * 10, 30)
 
-    # EMA
-    if latest_close > ema20:
-        score += 15
+        # Relative Volume
+        score += min(relative_volume * 15, 25)
 
-    # VWAP
-    if latest_close > vwap:
-        score += 10
+        # Breakout
+        if breakout_distance > 98:
+            score += 20
 
-    # Candle Strength
-    candle_strength = (
-        (df["Close"].iloc[-1] - df["Open"].iloc[-1]) /
-        df["Open"].iloc[-1]
-    ) * 100
+        # EMA
+        if latest_close > ema20:
+            score += 15
 
-    if candle_strength > 0.5:
-        score += 10
+        # VWAP
+        if latest_close > vwap:
+            score += 10
 
-    # Momentum State
-    momentum_state = "WATCH"
+        # Candle Strength
+        latest_open = float(df["Open"].values[-1])
 
-    if score >= 80:
-        momentum_state = "EXPLOSIVE"
-    elif score >= 60:
-        momentum_state = "BUILDING"
-    elif score >= 40:
-        momentum_state = "ACTIVE"
-    elif score >= 20:
-        momentum_state = "EARLY"
+        candle_strength = (
+            (latest_close - latest_open) / latest_open
+        ) * 100
 
-    return {
-        "price": round(latest_close, 2),
-        "change": round(price_change, 2),
-        "rvol": round(relative_volume, 2),
-        "ema20": round(ema20, 2),
-        "vwap": round(vwap, 2),
-        "score": round(score, 2),
-        "state": momentum_state,
-        "breakout": round(breakout_distance, 2)
-    }
+        if candle_strength > 0.5:
+            score += 10
 
-# =====================================================
-# PROCESS WATCHLIST
-# =====================================================
+        # Momentum State
+        momentum_state = "WATCH"
 
-momentum_data = []
+        if score >= 80:
+            momentum_state = "EXPLOSIVE"
+        elif score >= 60:
+            momentum_state = "BUILDING"
+        elif score >= 40:
+            momentum_state = "ACTIVE"
+        elif score >= 20:
+            momentum_state = "EARLY"
 
-chart_stock_data = None
-chart_symbol = None
+        return {
+            "price": round(latest_close, 2),
+            "change": round(price_change, 2),
+            "rvol": round(relative_volume, 2),
+            "ema20": round(ema20, 2),
+            "vwap": round(vwap, 2),
+            "score": round(score, 2),
+            "state": momentum_state,
+            "breakout": round(breakout_distance, 2)
+        }
 
-for stock in st.session_state.watchlist:
+    except Exception as e:
 
-    symbol = NIFTY_STOCKS[stock]
-
-    df = fetch_stock_data(symbol)
-
-    if df is not None:
-
-        metrics = calculate_metrics(df)
-
-        metrics["stock"] = stock
-        metrics["sector"] = SECTOR_MAP.get(stock, "Other")
-
-        momentum_data.append(metrics)
-
-        if chart_stock_data is None:
-            chart_stock_data = df
-            chart_symbol = stock
+        return {
+            "price": 0,
+            "change": 0,
+            "rvol": 0,
+            "ema20": 0,
+            "vwap": 0,
+            "score": 0,
+            "state": "ERROR",
+            "breakout": 0
+        }
 
 # =====================================================
 # DISPLAY MOMENTUM TABLE
