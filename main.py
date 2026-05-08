@@ -354,45 +354,33 @@ def calculate_metrics(df):
 # DISPLAY MOMENTUM TABLE
 # =====================================================
 
-if len(momentum_data) > 0:
+# =====================================================
+# PROCESS WATCHLIST
+# =====================================================
 
-    momentum_df = pd.DataFrame(momentum_data)
+momentum_data = []
 
-    momentum_df = momentum_df.sort_values(
-        by="score",
-        ascending=False
-    ).reset_index(drop=True)
+chart_stock_data = None
+chart_symbol = None
 
-    momentum_df.index = momentum_df.index + 1
+for stock in st.session_state.watchlist:
 
-    momentum_df.rename_axis("Rank", inplace=True)
+    symbol = NIFTY_STOCKS[stock]
 
-    st.subheader("⚡ Live Momentum Ladder")
+    df = fetch_stock_data(symbol)
 
-    def score_style(val):
+    if df is not None:
 
-        if val >= 80:
-            return "background-color: #00AA66; color: white"
+        metrics = calculate_metrics(df)
 
-        elif val >= 60:
-            return "background-color: #2ECC71; color: white"
+        metrics["stock"] = stock
+        metrics["sector"] = SECTOR_MAP.get(stock, "Other")
 
-        elif val >= 40:
-            return "background-color: #F1C40F; color: black"
+        momentum_data.append(metrics)
 
-        else:
-            return "background-color: #E74C3C; color: white"
-
-    styled_df = momentum_df.style.map(
-        score_style,
-        subset=["score"]
-    )
-
-    st.dataframe(
-        styled_df,
-        use_container_width=True,
-        height=400
-    )
+        if chart_stock_data is None:
+            chart_stock_data = df
+            chart_symbol = stock
 
     # =================================================
     # SECTOR HEATMAP
