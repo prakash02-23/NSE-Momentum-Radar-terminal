@@ -32,14 +32,22 @@ st.markdown("""
 <style>
 
 .stApp {
-    background-color: #0E1117;
+    background-color: #0B1020;
     color: white;
 }
 
 .main-title {
-    font-size: 40px;
-    font-weight: bold;
+    font-size: 46px;
+    font-weight: 900;
     color: white;
+}
+
+.section-title {
+    font-size: 34px;
+    font-weight: 900;
+    color: white;
+    margin-top: 20px;
+    margin-bottom: 10px;
 }
 
 .block-container {
@@ -47,57 +55,144 @@ st.markdown("""
 }
 
 [data-testid="stSidebar"] {
-    background-color: #1B1E27;
+    background-color: #161B2E;
 }
 
-.stock-card {
-    padding: 8px;
-    border-radius: 10px;
-    background-color: #252A36;
-    margin-bottom: 6px;
+div[data-testid="stMetric"] {
+    background-color: #151B2D;
+    border: 1px solid #2B3552;
+    padding: 12px;
+    border-radius: 12px;
+}
+
+thead tr th {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+}
+
+tbody tr td {
+    font-size: 16px !important;
+    font-weight: 600 !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# STOCKS
+# COMPLETE NIFTY 50 + NEXT 50
 # =====================================================
 
 NIFTY_STOCKS = {
-    "RELIANCE": "RELIANCE.NS",
-    "TCS": "TCS.NS",
-    "INFY": "INFY.NS",
-    "HDFCBANK": "HDFCBANK.NS",
-    "ICICIBANK": "ICICIBANK.NS",
-    "SBIN": "SBIN.NS",
-    "LT": "LT.NS",
+
+    # NIFTY 50
+    "ADANIENT": "ADANIENT.NS",
+    "ADANIPORTS": "ADANIPORTS.NS",
+    "APOLLOHOSP": "APOLLOHOSP.NS",
+    "ASIANPAINT": "ASIANPAINT.NS",
     "AXISBANK": "AXISBANK.NS",
-    "KOTAKBANK": "KOTAKBANK.NS",
-    "ITC": "ITC.NS",
+    "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
+    "BAJFINANCE": "BAJFINANCE.NS",
+    "BAJAJFINSV": "BAJAJFINSV.NS",
     "BEL": "BEL.NS",
-    "HAL": "HAL.NS",
-    "TRENT": "TRENT.NS",
+    "BHARTIARTL": "BHARTIARTL.NS",
+    "BPCL": "BPCL.NS",
+    "BRITANNIA": "BRITANNIA.NS",
+    "CIPLA": "CIPLA.NS",
+    "COALINDIA": "COALINDIA.NS",
+    "DRREDDY": "DRREDDY.NS",
+    "EICHERMOT": "EICHERMOT.NS",
+    "GRASIM": "GRASIM.NS",
+    "HCLTECH": "HCLTECH.NS",
+    "HDFCBANK": "HDFCBANK.NS",
+    "HDFCLIFE": "HDFCLIFE.NS",
+    "HEROMOTOCO": "HEROMOTOCO.NS",
+    "HINDALCO": "HINDALCO.NS",
+    "HINDUNILVR": "HINDUNILVR.NS",
+    "ICICIBANK": "ICICIBANK.NS",
+    "INDUSINDBK": "INDUSINDBK.NS",
+    "INFY": "INFY.NS",
+    "ITC": "ITC.NS",
+    "JSWSTEEL": "JSWSTEEL.NS",
+    "KOTAKBANK": "KOTAKBANK.NS",
+    "LT": "LT.NS",
+    "M&M": "M&M.NS",
+    "MARUTI": "MARUTI.NS",
+    "NESTLEIND": "NESTLEIND.NS",
+    "NTPC": "NTPC.NS",
+    "ONGC": "ONGC.NS",
+    "POWERGRID": "POWERGRID.NS",
+    "RELIANCE": "RELIANCE.NS",
+    "SBILIFE": "SBILIFE.NS",
+    "SBIN": "SBIN.NS",
+    "SHRIRAMFIN": "SHRIRAMFIN.NS",
+    "SUNPHARMA": "SUNPHARMA.NS",
+    "TATACONSUM": "TATACONSUM.NS",
     "TATAMOTORS": "TATAMOTORS.NS",
-    "SUNPHARMA": "SUNPHARMA.NS"
+    "TATASTEEL": "TATASTEEL.NS",
+    "TCS": "TCS.NS",
+    "TECHM": "TECHM.NS",
+    "TITAN": "TITAN.NS",
+    "TRENT": "TRENT.NS",
+    "ULTRACEMCO": "ULTRACEMCO.NS",
+    "WIPRO": "WIPRO.NS",
+
+    # NEXT 50
+    "ABB": "ABB.NS",
+    "ACC": "ACC.NS",
+    "AMBUJACEM": "AMBUJACEM.NS",
+    "BAJAJHLDNG": "BAJAJHLDNG.NS",
+    "BANKBARODA": "BANKBARODA.NS",
+    "BERGEPAINT": "BERGEPAINT.NS",
+    "BOSCHLTD": "BOSCHLTD.NS",
+    "CANBK": "CANBK.NS",
+    "CHOLAFIN": "CHOLAFIN.NS",
+    "DABUR": "DABUR.NS",
+    "DIVISLAB": "DIVISLAB.NS",
+    "DLF": "DLF.NS",
+    "GAIL": "GAIL.NS",
+    "GODREJCP": "GODREJCP.NS",
+    "HAL": "HAL.NS",
+    "HAVELLS": "HAVELLS.NS",
+    "ICICIGI": "ICICIGI.NS",
+    "INDIGO": "INDIGO.NS",
+    "IOC": "IOC.NS",
+    "IRCTC": "IRCTC.NS",
+    "JINDALSTEL": "JINDALSTEL.NS",
+    "LICI": "LICI.NS",
+    "LODHA": "LODHA.NS",
+    "MCDOWELL-N": "MCDOWELL-N.NS",
+    "MOTHERSON": "MOTHERSON.NS",
+    "NAUKRI": "NAUKRI.NS",
+    "PIDILITIND": "PIDILITIND.NS",
+    "PNB": "PNB.NS",
+    "RECLTD": "RECLTD.NS",
+    "SIEMENS": "SIEMENS.NS",
+    "TORNTPHARM": "TORNTPHARM.NS",
+    "TVSMOTOR": "TVSMOTOR.NS",
+    "VEDL": "VEDL.NS",
+    "ZYDUSLIFE": "ZYDUSLIFE.NS"
 }
+
+# =====================================================
+# SECTOR MAP
+# =====================================================
 
 SECTOR_MAP = {
     "RELIANCE": "Energy",
-    "TCS": "IT",
     "INFY": "IT",
+    "TCS": "IT",
     "HDFCBANK": "Banking",
     "ICICIBANK": "Banking",
     "SBIN": "Banking",
-    "LT": "Infrastructure",
-    "AXISBANK": "Banking",
-    "KOTAKBANK": "Banking",
-    "ITC": "FMCG",
     "BEL": "Defence",
     "HAL": "Defence",
     "TRENT": "Retail",
     "TATAMOTORS": "Auto",
-    "SUNPHARMA": "Pharma"
+    "SUNPHARMA": "Pharma",
+    "AXISBANK": "Banking",
+    "ITC": "FMCG",
+    "LT": "Infrastructure"
 }
 
 # =====================================================
@@ -112,8 +207,8 @@ if "watchlist" not in st.session_state:
         "BEL"
     ]
 
-if "selected_chart_stock" not in st.session_state:
-    st.session_state.selected_chart_stock = "RELIANCE"
+if "selected_stock" not in st.session_state:
+    st.session_state.selected_stock = "RELIANCE"
 
 # =====================================================
 # SIDEBAR
@@ -122,33 +217,44 @@ if "selected_chart_stock" not in st.session_state:
 st.sidebar.title("📊 Watchlist")
 
 selected_stock = st.sidebar.selectbox(
-    "Add Stock",
+    "Search & Add Stock",
     sorted(list(NIFTY_STOCKS.keys()))
 )
 
 if st.sidebar.button("➕ Add Stock"):
+
     if selected_stock not in st.session_state.watchlist:
         st.session_state.watchlist.append(selected_stock)
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("Current Watchlist")
-
 stocks_to_remove = []
 
 for stock in st.session_state.watchlist:
 
-    col1, col2 = st.sidebar.columns([4, 1])
+    col1, col2 = st.sidebar.columns([5, 1])
 
     with col1:
-        st.write(f"• {stock}")
+
+        if st.button(
+            f"📌 {stock}",
+            key=f"select_{stock}",
+            use_container_width=True
+        ):
+            st.session_state.selected_stock = stock
 
     with col2:
-        if st.button("❌", key=f"remove_{stock}"):
+
+        if st.button(
+            "❌",
+            key=f"remove_{stock}"
+        ):
             stocks_to_remove.append(stock)
 
 for stock in stocks_to_remove:
-    st.session_state.watchlist.remove(stock)
+
+    if stock in st.session_state.watchlist:
+        st.session_state.watchlist.remove(stock)
 
 # =====================================================
 # HEADER
@@ -156,9 +262,10 @@ for stock in stocks_to_remove:
 
 ist_time = datetime.now(ZoneInfo("Asia/Kolkata"))
 
-col1, col2, col3 = st.columns([4, 2, 2])
+col1, col2, col3 = st.columns([5, 2, 2])
 
 with col1:
+
     st.markdown(
         '<div class="main-title">🚀 NSE Momentum Radar</div>',
         unsafe_allow_html=True
@@ -178,6 +285,7 @@ with col2:
     st.metric("Market", market_status)
 
 with col3:
+
     st.metric(
         "Indian Time",
         ist_time.strftime("%H:%M:%S")
@@ -186,7 +294,7 @@ with col3:
 st.markdown("---")
 
 # =====================================================
-# DATA FETCHING
+# FETCH DATA
 # =====================================================
 
 @st.cache_data(ttl=300)
@@ -367,31 +475,37 @@ momentum_df.index = momentum_df.index + 1
 momentum_df.rename_axis("Rank", inplace=True)
 
 # =====================================================
-# SELECT STOCK FOR CHART
+# LIVE MOMENTUM LADDER
 # =====================================================
 
-selected_chart_stock = st.selectbox(
-    "📈 Select Stock For Chart",
-    momentum_df["stock"].tolist()
+st.markdown(
+    '<div class="section-title">⚡ LIVE MOMENTUM LADDER</div>',
+    unsafe_allow_html=True
 )
-
-st.session_state.selected_chart_stock = selected_chart_stock
-
-# =====================================================
-# MOMENTUM LADDER
-# =====================================================
-
-st.subheader("⚡ Live Momentum Ladder")
 
 formatted_df = momentum_df.copy()
 
-formatted_df["price"] = formatted_df["price"].map("₹{:,.2f}".format)
-formatted_df["change"] = formatted_df["change"].map("{:+.2f}%".format)
-formatted_df["rvol"] = formatted_df["rvol"].map("{:.2f}x".format)
-formatted_df["score"] = formatted_df["score"].map("{:.2f}".format)
-formatted_df["breakout"] = formatted_df["breakout"].map("{:.2f}%".format)
+formatted_df["price"] = formatted_df["price"].map(
+    "₹{:,.2f}".format
+)
 
-st.dataframe(
+formatted_df["change"] = formatted_df["change"].map(
+    "{:+.2f}%".format
+)
+
+formatted_df["rvol"] = formatted_df["rvol"].map(
+    "{:.2f}x".format
+)
+
+formatted_df["score"] = formatted_df["score"].map(
+    "{:.2f}".format
+)
+
+formatted_df["breakout"] = formatted_df["breakout"].map(
+    "{:.2f}%".format
+)
+
+selected_row = st.dataframe(
     formatted_df,
     use_container_width=True,
     hide_index=False
@@ -401,7 +515,10 @@ st.dataframe(
 # HEATMAP
 # =====================================================
 
-st.subheader("📈 Sector Momentum Heatmap")
+st.markdown(
+    '<div class="section-title">📈 SECTOR MOMENTUM HEATMAP</div>',
+    unsafe_allow_html=True
+)
 
 sector_strength = momentum_df.groupby(
     "sector"
@@ -412,20 +529,24 @@ heatmap_fig = px.treemap(
     path=["sector"],
     values="score",
     color="score",
-    color_continuous_scale="RdYlGn"
+    color_continuous_scale="RdYlGn",
+    custom_data=["score"]
 )
 
 heatmap_fig.update_traces(
-    textfont_size=28,
-    textfont_color="white"
+    textfont_size=40,
+    textfont_color="white",
+    texttemplate="<b>%{label}</b>",
+    hovertemplate="<b>%{label}</b><br>Momentum Score: %{value}<extra></extra>"
 )
 
 heatmap_fig.update_layout(
-    paper_bgcolor="#0E1117",
-    plot_bgcolor="#0E1117",
+    paper_bgcolor="#0B1020",
+    plot_bgcolor="#0B1020",
     font_color="white",
     height=500,
-    margin=dict(t=20, l=10, r=10, b=10)
+    margin=dict(t=10, l=10, r=10, b=10),
+    coloraxis_showscale=False
 )
 
 st.plotly_chart(
@@ -437,12 +558,15 @@ st.plotly_chart(
 # CHART
 # =====================================================
 
-if selected_chart_stock in stock_data_map:
+selected_stock = st.session_state.selected_stock
 
-    chart_stock_data = stock_data_map[selected_chart_stock]
+if selected_stock in stock_data_map:
 
-    st.subheader(
-        f"📊 Selected Stock Chart — {selected_chart_stock}"
+    chart_stock_data = stock_data_map[selected_stock]
+
+    st.markdown(
+        f'<div class="section-title">📊 {selected_stock} CHART</div>',
+        unsafe_allow_html=True
     )
 
     chart_fig = go.Figure(
@@ -458,9 +582,9 @@ if selected_chart_stock in stock_data_map:
     )
 
     chart_fig.update_layout(
-        height=600,
-        paper_bgcolor="#0E1117",
-        plot_bgcolor="#0E1117",
+        height=650,
+        paper_bgcolor="#0B1020",
+        plot_bgcolor="#0B1020",
         font_color="white",
         xaxis_rangeslider_visible=False
     )
@@ -474,40 +598,47 @@ if selected_chart_stock in stock_data_map:
 # INSIGHTS
 # =====================================================
 
-st.subheader("🧠 Momentum Insights")
+st.markdown(
+    '<div class="section-title">🧠 MOMENTUM INSIGHTS</div>',
+    unsafe_allow_html=True
+)
 
 selected_row = momentum_df[
-    momentum_df["stock"] == selected_chart_stock
+    momentum_df["stock"] == selected_stock
 ].iloc[0]
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
+
     st.metric(
-        "Momentum Score ❓",
+        "Momentum Score",
         selected_row["score"],
-        help="Overall momentum strength based on price, volume, breakout and trend"
+        help="Overall momentum strength based on price, breakout, trend and volume activity."
     )
 
 with col2:
+
     st.metric(
-        "Relative Volume ❓",
+        "Relative Volume",
         f"{selected_row['rvol']}x",
-        help="Shows how much trading volume increased compared to average"
+        help="Compares current volume with average volume. Higher means stronger activity."
     )
 
 with col3:
+
     st.metric(
-        "Momentum State ❓",
+        "Momentum State",
         selected_row["state"],
-        help="Current momentum phase of the stock"
+        help="Current momentum phase of the stock based on trend strength."
     )
 
 with col4:
+
     st.metric(
-        "Breakout Strength ❓",
+        "Breakout Strength",
         f"{selected_row['breakout']}%",
-        help="Shows how close stock is to breakout zone"
+        help="Shows how close stock is to breakout zone."
     )
 
 # =====================================================
