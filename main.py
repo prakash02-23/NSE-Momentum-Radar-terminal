@@ -65,11 +65,69 @@ div[data-testid="stMetric"] {
     border-radius: 12px;
 }
 
+st.markdown("""
+<style>
+
+.stApp {
+    background-color: #0B1020;
+    color: white;
+}
+
+.main-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: white;
+}
+
+.section-title {
+    font-size: 34px;
+    font-weight: 900;
+    color: white;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.block-container {
+    padding-top: 1rem;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #161B2E;
+}
+
+div[data-testid="stMetric"] {
+    background-color: #151B2D;
+    border: 1px solid #2B3552;
+    padding: 12px;
+    border-radius: 12px;
+}
+
+/* TABLE HEADER */
+
 thead tr th {
     font-size: 18px !important;
-    font-weight: bold !important;
+    font-weight: 900 !important;
     text-transform: uppercase !important;
+    color: white !important;
+    background-color: #18233B !important;
 }
+
+/* TABLE DATA */
+
+tbody tr td {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: white !important;
+}
+
+/* REMOVE SMALL FADED HEADER LOOK */
+
+div[data-testid="stDataFrame"] * {
+    color: white !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 tbody tr td {
     font-size: 16px !important;
@@ -485,30 +543,57 @@ st.markdown(
 
 formatted_df = momentum_df.copy()
 
-formatted_df["price"] = formatted_df["price"].map(
+formatted_df["PRICE"] = formatted_df["price"].map(
     "₹{:,.2f}".format
 )
 
-formatted_df["change"] = formatted_df["change"].map(
+formatted_df["CHANGE"] = formatted_df["change"].map(
     "{:+.2f}%".format
 )
 
-formatted_df["rvol"] = formatted_df["rvol"].map(
+formatted_df["RVOL"] = formatted_df["rvol"].map(
     "{:.2f}x".format
 )
 
-formatted_df["score"] = formatted_df["score"].map(
+formatted_df["SCORE"] = formatted_df["score"].map(
     "{:.2f}".format
 )
 
-formatted_df["breakout"] = formatted_df["breakout"].map(
+formatted_df["STATE"] = formatted_df["state"]
+
+formatted_df["BREAKOUT"] = formatted_df["breakout"].map(
     "{:.2f}%".format
 )
 
-selected_row = st.dataframe(
+formatted_df["STOCK"] = formatted_df["stock"]
+
+formatted_df["SECTOR"] = formatted_df["sector"]
+
+formatted_df = formatted_df[
+    [
+        "PRICE",
+        "CHANGE",
+        "RVOL",
+        "SCORE",
+        "STATE",
+        "BREAKOUT",
+        "STOCK",
+        "SECTOR"
+    ]
+]
+
+selected_stock = st.selectbox(
+    "📌 Select Stock For Detailed Chart",
+    formatted_df["STOCK"].tolist()
+)
+
+st.session_state.selected_stock = selected_stock
+
+st.dataframe(
     formatted_df,
     use_container_width=True,
-    hide_index=False
+    hide_index=False,
+    height=(len(formatted_df) + 1) * 38
 )
 
 # =====================================================
@@ -555,7 +640,7 @@ st.plotly_chart(
 )
 
 # =====================================================
-# CHART
+# ADVANCED CHART
 # =====================================================
 
 selected_stock = st.session_state.selected_stock
@@ -565,28 +650,82 @@ if selected_stock in stock_data_map:
     chart_stock_data = stock_data_map[selected_stock]
 
     st.markdown(
-        f'<div class="section-title">📊 {selected_stock} CHART</div>',
+        f'<div class="section-title">📊 {selected_stock} ADVANCED MOMENTUM CHART</div>',
         unsafe_allow_html=True
     )
 
-    chart_fig = go.Figure(
-        data=[
-            go.Candlestick(
-                x=chart_stock_data.index,
-                open=chart_stock_data["Open"],
-                high=chart_stock_data["High"],
-                low=chart_stock_data["Low"],
-                close=chart_stock_data["Close"]
-            )
-        ]
+    # EMA
+    chart_stock_data["EMA20"] = (
+        chart_stock_data["Close"]
+        .ewm(span=20)
+        .mean()
+    )
+
+    # VWAP
+    typical_price = (
+        chart_stock_data["High"] +
+        chart_stock_data["Low"] +
+        chart_stock_data["Close"]
+    ) / 3
+
+    chart_stock_data["VWAP"] = (
+        (typical_price * chart_stock_data["Volume"]).cumsum() /
+        chart_stock_data["Volume"].cumsum()
+    )
+
+    chart_fig = go.Figure()
+
+    # CANDLESTICK
+
+    chart_fig.add_trace(
+        go.Candlestick(
+            x=chart_stock_data.index,
+            open=chart_stock_data["Open"],
+            high=chart_stock_data["High"],
+            low=chart_stock_data["Low"],
+            close=chart_stock_data["Close"],
+            name="Price"
+        )
+    )
+
+    # EMA20
+
+    chart_fig.add_trace(
+        go.Scatter(
+            x=chart_stock_data.index,
+            y=chart_stock_data["EMA20"],
+            mode="lines",
+            name="EMA20",
+            line=dict(width=2)
+        )
+    )
+
+    # VWAP
+
+    chart_fig.add_trace(
+        go.Scatter(
+            x=chart_stock_data.index,
+            y=chart_stock_data["VWAP"],
+            mode="lines",
+            name="VWAP",
+            line=dict(width=2)
+        )
     )
 
     chart_fig.update_layout(
-        height=650,
+        height=750,
         paper_bgcolor="#0B1020",
         plot_bgcolor="#0B1020",
         font_color="white",
-        xaxis_rangeslider_visible=False
+        xaxis_rangeslider_visible=False,
+        hovermode="x unified",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
     )
 
     st.plotly_chart(
