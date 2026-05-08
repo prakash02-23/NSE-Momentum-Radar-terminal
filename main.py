@@ -37,9 +37,24 @@ st.markdown("""
 }
 
 .main-title {
-    font-size: 34px;
+    font-size: 40px;
     font-weight: bold;
     color: white;
+}
+
+.block-container {
+    padding-top: 1rem;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #1B1E27;
+}
+
+.stock-card {
+    padding: 8px;
+    border-radius: 10px;
+    background-color: #252A36;
+    margin-bottom: 6px;
 }
 
 </style>
@@ -97,6 +112,9 @@ if "watchlist" not in st.session_state:
         "BEL"
     ]
 
+if "selected_chart_stock" not in st.session_state:
+    st.session_state.selected_chart_stock = "RELIANCE"
+
 # =====================================================
 # SIDEBAR
 # =====================================================
@@ -108,24 +126,29 @@ selected_stock = st.sidebar.selectbox(
     sorted(list(NIFTY_STOCKS.keys()))
 )
 
-if st.sidebar.button("➕ Add"):
+if st.sidebar.button("➕ Add Stock"):
     if selected_stock not in st.session_state.watchlist:
         st.session_state.watchlist.append(selected_stock)
 
-if len(st.session_state.watchlist) > 0:
-
-    remove_stock = st.sidebar.selectbox(
-        "Remove Stock",
-        st.session_state.watchlist
-    )
-
-    if st.sidebar.button("❌ Remove"):
-        st.session_state.watchlist.remove(remove_stock)
-
 st.sidebar.markdown("---")
 
+st.sidebar.subheader("Current Watchlist")
+
+stocks_to_remove = []
+
 for stock in st.session_state.watchlist:
-    st.sidebar.write(f"• {stock}")
+
+    col1, col2 = st.sidebar.columns([4, 1])
+
+    with col1:
+        st.write(f"• {stock}")
+
+    with col2:
+        if st.button("❌", key=f"remove_{stock}"):
+            stocks_to_remove.append(stock)
+
+for stock in stocks_to_remove:
+    st.session_state.watchlist.remove(stock)
 
 # =====================================================
 # HEADER
@@ -232,7 +255,6 @@ def calculate_metrics(df):
             latest_close / breakout_high
         ) * 100
 
-        # VWAP
         typical_price = (
             df["High"] +
             df["Low"] +
@@ -246,7 +268,6 @@ def calculate_metrics(df):
             ).values[-1]
         )
 
-        # SCORE
         score = 0
 
         if price_change > 0:
@@ -298,9 +319,7 @@ def calculate_metrics(df):
 # =====================================================
 
 momentum_data = []
-
-chart_stock_data = None
-chart_symbol = None
+stock_data_map = {}
 
 for stock in st.session_state.watchlist:
 
@@ -318,13 +337,10 @@ for stock in st.session_state.watchlist:
             metrics["sector"] = SECTOR_MAP.get(stock, "Other")
 
             momentum_data.append(metrics)
-
-            if chart_stock_data is None:
-                chart_stock_data = df
-                chart_symbol = stock
+            stock_data_map[stock] = df
 
 # =====================================================
-# MAIN DASHBOARD
+# EMPTY CHECK
 # =====================================================
 
 if len(momentum_data) == 0:
@@ -338,13 +354,8 @@ if len(momentum_data) == 0:
 
 momentum_df = pd.DataFrame(momentum_data)
 
-if momentum_df.empty:
-
-    st.warning("No valid momentum data available.")
-    st.stop()
-
 # =====================================================
-# SORT RANKINGS
+# SORTING
 # =====================================================
 
 momentum_df = momentum_df.sort_values(
@@ -356,33 +367,34 @@ momentum_df.index = momentum_df.index + 1
 momentum_df.rename_axis("Rank", inplace=True)
 
 # =====================================================
-# MOMENTUM TABLE
+# SELECT STOCK FOR CHART
+# =====================================================
+
+selected_chart_stock = st.selectbox(
+    "📈 Select Stock For Chart",
+    momentum_df["stock"].tolist()
+)
+
+st.session_state.selected_chart_stock = selected_chart_stock
+
+# =====================================================
+# MOMENTUM LADDER
 # =====================================================
 
 st.subheader("⚡ Live Momentum Ladder")
 
-def score_style(val):
+formatted_df = momentum_df.copy()
 
-    if val >= 80:
-        return "background-color:#00AA66;color:white"
-
-    elif val >= 60:
-        return "background-color:#2ECC71;color:white"
-
-    elif val >= 40:
-        return "background-color:#F1C40F;color:black"
-
-    return "background-color:#E74C3C;color:white"
-
-styled_df = momentum_df.style.map(
-    score_style,
-    subset=["score"]
-)
+formatted_df["price"] = formatted_df["price"].map("₹{:,.2f}".format)
+formatted_df["change"] = formatted_df["change"].map("{:+.2f}%".format)
+formatted_df["rvol"] = formatted_df["rvol"].map("{:.2f}x".format)
+formatted_df["score"] = formatted_df["score"].map("{:.2f}".format)
+formatted_df["breakout"] = formatted_df["breakout"].map("{:.2f}%".format)
 
 st.dataframe(
-    styled_df,
+    formatted_df,
     use_container_width=True,
-    height=450
+    hide_index=False
 )
 
 # =====================================================
@@ -403,11 +415,17 @@ heatmap_fig = px.treemap(
     color_continuous_scale="RdYlGn"
 )
 
+heatmap_fig.update_traces(
+    textfont_size=28,
+    textfont_color="white"
+)
+
 heatmap_fig.update_layout(
     paper_bgcolor="#0E1117",
     plot_bgcolor="#0E1117",
     font_color="white",
-    height=500
+    height=500,
+    margin=dict(t=20, l=10, r=10, b=10)
 )
 
 st.plotly_chart(
@@ -419,9 +437,13 @@ st.plotly_chart(
 # CHART
 # =====================================================
 
-if chart_stock_data is not None:
+if selected_chart_stock in stock_data_map:
 
-    st.subheader(f"📊 Selected Stock Chart — {chart_symbol}")
+    chart_stock_data = stock_data_map[selected_chart_stock]
+
+    st.subheader(
+        f"📊 Selected Stock Chart — {selected_chart_stock}"
+    )
 
     chart_fig = go.Figure(
         data=[
@@ -449,25 +471,44 @@ if chart_stock_data is not None:
     )
 
 # =====================================================
-# AI INSIGHTS
+# INSIGHTS
 # =====================================================
 
 st.subheader("🧠 Momentum Insights")
 
-top_stock = momentum_df.iloc[0]
+selected_row = momentum_df[
+    momentum_df["stock"] == selected_chart_stock
+].iloc[0]
 
-insight_text = f"""
-{top_stock['stock']} currently leads momentum rankings.
+col1, col2, col3, col4 = st.columns(4)
 
-Key Signals:
-• Momentum Score: {top_stock['score']}
-• Relative Volume: {top_stock['rvol']}x
-• Momentum State: {top_stock['state']}
-• Sector: {top_stock['sector']}
-• Breakout Strength: {top_stock['breakout']}%
-"""
+with col1:
+    st.metric(
+        "Momentum Score ❓",
+        selected_row["score"],
+        help="Overall momentum strength based on price, volume, breakout and trend"
+    )
 
-st.info(insight_text)
+with col2:
+    st.metric(
+        "Relative Volume ❓",
+        f"{selected_row['rvol']}x",
+        help="Shows how much trading volume increased compared to average"
+    )
+
+with col3:
+    st.metric(
+        "Momentum State ❓",
+        selected_row["state"],
+        help="Current momentum phase of the stock"
+    )
+
+with col4:
+    st.metric(
+        "Breakout Strength ❓",
+        f"{selected_row['breakout']}%",
+        help="Shows how close stock is to breakout zone"
+    )
 
 # =====================================================
 # FOOTER
