@@ -22,7 +22,7 @@ st.set_page_config(
 # AUTO REFRESH
 # =====================================================
 
-st_autorefresh(interval=10000, key="refresh_counter")
+st_autorefresh(interval=60000, key="refresh_counter")
 
 # =====================================================
 # CUSTOM CSS
@@ -42,18 +42,11 @@ st.markdown("""
     color: white;
 }
 
-.metric-container {
-    background-color: #1C1F26;
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid #2E323B;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# STOCK LIST
+# STOCKS
 # =====================================================
 
 NIFTY_STOCKS = {
@@ -67,31 +60,12 @@ NIFTY_STOCKS = {
     "AXISBANK": "AXISBANK.NS",
     "KOTAKBANK": "KOTAKBANK.NS",
     "ITC": "ITC.NS",
-    "BAJFINANCE": "BAJFINANCE.NS",
-    "ASIANPAINT": "ASIANPAINT.NS",
-    "MARUTI": "MARUTI.NS",
-    "BHARTIARTL": "BHARTIARTL.NS",
-    "TITAN": "TITAN.NS",
-    "SUNPHARMA": "SUNPHARMA.NS",
-    "ULTRACEMCO": "ULTRACEMCO.NS",
-    "NTPC": "NTPC.NS",
-    "POWERGRID": "POWERGRID.NS",
-    "HCLTECH": "HCLTECH.NS",
     "BEL": "BEL.NS",
     "HAL": "HAL.NS",
     "TRENT": "TRENT.NS",
-    "DLF": "DLF.NS",
-    "ADANIPORTS": "ADANIPORTS.NS",
     "TATAMOTORS": "TATAMOTORS.NS",
-    "JSWSTEEL": "JSWSTEEL.NS",
-    "INDIGO": "INDIGO.NS",
-    "DIVISLAB": "DIVISLAB.NS",
-    "BAJAJFINSV": "BAJAJFINSV.NS"
+    "SUNPHARMA": "SUNPHARMA.NS"
 }
-
-# =====================================================
-# SECTOR MAP
-# =====================================================
 
 SECTOR_MAP = {
     "RELIANCE": "Energy",
@@ -104,26 +78,11 @@ SECTOR_MAP = {
     "AXISBANK": "Banking",
     "KOTAKBANK": "Banking",
     "ITC": "FMCG",
-    "BAJFINANCE": "Finance",
-    "ASIANPAINT": "Paint",
-    "MARUTI": "Auto",
-    "BHARTIARTL": "Telecom",
-    "TITAN": "Retail",
-    "SUNPHARMA": "Pharma",
-    "ULTRACEMCO": "Cement",
-    "NTPC": "Power",
-    "POWERGRID": "Power",
-    "HCLTECH": "IT",
     "BEL": "Defence",
     "HAL": "Defence",
     "TRENT": "Retail",
-    "DLF": "Realty",
-    "ADANIPORTS": "Logistics",
     "TATAMOTORS": "Auto",
-    "JSWSTEEL": "Metal",
-    "INDIGO": "Aviation",
-    "DIVISLAB": "Pharma",
-    "BAJAJFINSV": "Finance"
+    "SUNPHARMA": "Pharma"
 }
 
 # =====================================================
@@ -135,7 +94,6 @@ if "watchlist" not in st.session_state:
         "RELIANCE",
         "TCS",
         "INFY",
-        "HDFCBANK",
         "BEL"
     ]
 
@@ -143,14 +101,14 @@ if "watchlist" not in st.session_state:
 # SIDEBAR
 # =====================================================
 
-st.sidebar.title("📊 Watchlist Manager")
+st.sidebar.title("📊 Watchlist")
 
 selected_stock = st.sidebar.selectbox(
-    "Search Stock",
+    "Add Stock",
     sorted(list(NIFTY_STOCKS.keys()))
 )
 
-if st.sidebar.button("➕ Add Stock"):
+if st.sidebar.button("➕ Add"):
     if selected_stock not in st.session_state.watchlist:
         st.session_state.watchlist.append(selected_stock)
 
@@ -161,12 +119,10 @@ if len(st.session_state.watchlist) > 0:
         st.session_state.watchlist
     )
 
-    if st.sidebar.button("❌ Remove Stock"):
+    if st.sidebar.button("❌ Remove"):
         st.session_state.watchlist.remove(remove_stock)
 
 st.sidebar.markdown("---")
-
-st.sidebar.subheader("Current Watchlist")
 
 for stock in st.session_state.watchlist:
     st.sidebar.write(f"• {stock}")
@@ -186,16 +142,17 @@ with col1:
     )
 
 with col2:
+
     market_status = "NSE OPEN"
 
     if (
         ist_time.hour < 9 or
-        (ist_time.hour == 15 and ist_time.minute > 30) or
-        ist_time.hour > 15
+        ist_time.hour > 15 or
+        (ist_time.hour == 15 and ist_time.minute > 30)
     ):
         market_status = "NSE CLOSED"
 
-    st.metric("Market Status", market_status)
+    st.metric("Market", market_status)
 
 with col3:
     st.metric(
@@ -209,19 +166,27 @@ st.markdown("---")
 # DATA FETCHING
 # =====================================================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=300)
 def fetch_stock_data(symbol):
 
     try:
+
         df = yf.download(
             symbol,
             period="5d",
             interval="5m",
+            progress=False,
             auto_adjust=True,
-            progress=False
+            threads=False
         )
 
-        if df.empty:
+        if df is None or df.empty:
+            return None
+
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        if len(df) < 20:
             return None
 
         return df
@@ -230,25 +195,24 @@ def fetch_stock_data(symbol):
         return None
 
 # =====================================================
-# MOMENTUM CALCULATION
+# MOMENTUM ENGINE
 # =====================================================
 
 def calculate_metrics(df):
 
     try:
 
-        # FIX MULTIINDEX COLUMNS
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-
         latest_close = float(df["Close"].values[-1])
         prev_close = float(df["Close"].values[-2])
+
+        latest_open = float(df["Open"].values[-1])
 
         price_change = (
             (latest_close - prev_close) / prev_close
         ) * 100
 
         volume_avg = df["Volume"].rolling(20).mean().values[-1]
+
         current_volume = float(df["Volume"].values[-1])
 
         if volume_avg == 0 or np.isnan(volume_avg):
@@ -282,30 +246,22 @@ def calculate_metrics(df):
             ).values[-1]
         )
 
-        # MOMENTUM SCORE
+        # SCORE
         score = 0
 
-        # Price Momentum
         if price_change > 0:
             score += min(price_change * 10, 30)
 
-        # Relative Volume
         score += min(relative_volume * 15, 25)
 
-        # Breakout
         if breakout_distance > 98:
             score += 20
 
-        # EMA
         if latest_close > ema20:
             score += 15
 
-        # VWAP
         if latest_close > vwap:
             score += 10
-
-        # Candle Strength
-        latest_open = float(df["Open"].values[-1])
 
         candle_strength = (
             (latest_close - latest_open) / latest_open
@@ -314,45 +270,28 @@ def calculate_metrics(df):
         if candle_strength > 0.5:
             score += 10
 
-        # Momentum State
-        momentum_state = "WATCH"
+        state = "WATCH"
 
         if score >= 80:
-            momentum_state = "EXPLOSIVE"
+            state = "EXPLOSIVE"
         elif score >= 60:
-            momentum_state = "BUILDING"
+            state = "BUILDING"
         elif score >= 40:
-            momentum_state = "ACTIVE"
+            state = "ACTIVE"
         elif score >= 20:
-            momentum_state = "EARLY"
+            state = "EARLY"
 
         return {
             "price": round(latest_close, 2),
             "change": round(price_change, 2),
             "rvol": round(relative_volume, 2),
-            "ema20": round(ema20, 2),
-            "vwap": round(vwap, 2),
             "score": round(score, 2),
-            "state": momentum_state,
+            "state": state,
             "breakout": round(breakout_distance, 2)
         }
 
-    except Exception as e:
-
-        return {
-            "price": 0,
-            "change": 0,
-            "rvol": 0,
-            "ema20": 0,
-            "vwap": 0,
-            "score": 0,
-            "state": "ERROR",
-            "breakout": 0
-        }
-
-# =====================================================
-# DISPLAY MOMENTUM TABLE
-# =====================================================
+    except Exception:
+        return None
 
 # =====================================================
 # PROCESS WATCHLIST
@@ -373,102 +312,162 @@ for stock in st.session_state.watchlist:
 
         metrics = calculate_metrics(df)
 
-        metrics["stock"] = stock
-        metrics["sector"] = SECTOR_MAP.get(stock, "Other")
+        if metrics is not None:
 
-        momentum_data.append(metrics)
+            metrics["stock"] = stock
+            metrics["sector"] = SECTOR_MAP.get(stock, "Other")
 
-        if chart_stock_data is None:
-            chart_stock_data = df
-            chart_symbol = stock
+            momentum_data.append(metrics)
 
-    # =================================================
-    # SECTOR HEATMAP
-    # =================================================
+            if chart_stock_data is None:
+                chart_stock_data = df
+                chart_symbol = stock
 
-    st.subheader("📈 Sector Momentum Heatmap")
+# =====================================================
+# MAIN DASHBOARD
+# =====================================================
 
-    sector_strength = momentum_df.groupby(
-        "sector"
-    )["score"].mean().reset_index()
+if len(momentum_data) == 0:
 
-    heatmap_fig = px.treemap(
-        sector_strength,
-        path=["sector"],
-        values="score",
-        color="score",
-        color_continuous_scale="RdYlGn"
+    st.warning(
+        "No stock data available currently. "
+        "Yahoo Finance may be rate limiting requests."
     )
 
-    heatmap_fig.update_layout(
+    st.stop()
+
+momentum_df = pd.DataFrame(momentum_data)
+
+if momentum_df.empty:
+
+    st.warning("No valid momentum data available.")
+    st.stop()
+
+# =====================================================
+# SORT RANKINGS
+# =====================================================
+
+momentum_df = momentum_df.sort_values(
+    by="score",
+    ascending=False
+).reset_index(drop=True)
+
+momentum_df.index = momentum_df.index + 1
+momentum_df.rename_axis("Rank", inplace=True)
+
+# =====================================================
+# MOMENTUM TABLE
+# =====================================================
+
+st.subheader("⚡ Live Momentum Ladder")
+
+def score_style(val):
+
+    if val >= 80:
+        return "background-color:#00AA66;color:white"
+
+    elif val >= 60:
+        return "background-color:#2ECC71;color:white"
+
+    elif val >= 40:
+        return "background-color:#F1C40F;color:black"
+
+    return "background-color:#E74C3C;color:white"
+
+styled_df = momentum_df.style.map(
+    score_style,
+    subset=["score"]
+)
+
+st.dataframe(
+    styled_df,
+    use_container_width=True,
+    height=450
+)
+
+# =====================================================
+# HEATMAP
+# =====================================================
+
+st.subheader("📈 Sector Momentum Heatmap")
+
+sector_strength = momentum_df.groupby(
+    "sector"
+)["score"].mean().reset_index()
+
+heatmap_fig = px.treemap(
+    sector_strength,
+    path=["sector"],
+    values="score",
+    color="score",
+    color_continuous_scale="RdYlGn"
+)
+
+heatmap_fig.update_layout(
+    paper_bgcolor="#0E1117",
+    plot_bgcolor="#0E1117",
+    font_color="white",
+    height=500
+)
+
+st.plotly_chart(
+    heatmap_fig,
+    use_container_width=True
+)
+
+# =====================================================
+# CHART
+# =====================================================
+
+if chart_stock_data is not None:
+
+    st.subheader(f"📊 Selected Stock Chart — {chart_symbol}")
+
+    chart_fig = go.Figure(
+        data=[
+            go.Candlestick(
+                x=chart_stock_data.index,
+                open=chart_stock_data["Open"],
+                high=chart_stock_data["High"],
+                low=chart_stock_data["Low"],
+                close=chart_stock_data["Close"]
+            )
+        ]
+    )
+
+    chart_fig.update_layout(
+        height=600,
         paper_bgcolor="#0E1117",
         plot_bgcolor="#0E1117",
         font_color="white",
-        height=500
+        xaxis_rangeslider_visible=False
     )
 
     st.plotly_chart(
-        heatmap_fig,
+        chart_fig,
         use_container_width=True
     )
 
-    # =================================================
-    # CHART SECTION
-    # =================================================
+# =====================================================
+# AI INSIGHTS
+# =====================================================
 
-    if chart_stock_data is not None:
+st.subheader("🧠 Momentum Insights")
 
-        st.subheader(f"📊 Selected Stock Chart — {chart_symbol}")
+top_stock = momentum_df.iloc[0]
 
-        chart_fig = go.Figure(
-            data=[
-                go.Candlestick(
-                    x=chart_stock_data.index,
-                    open=chart_stock_data["Open"],
-                    high=chart_stock_data["High"],
-                    low=chart_stock_data["Low"],
-                    close=chart_stock_data["Close"]
-                )
-            ]
-        )
+insight_text = f"""
+{top_stock['stock']} currently leads momentum rankings.
 
-        chart_fig.update_layout(
-            height=600,
-            paper_bgcolor="#0E1117",
-            plot_bgcolor="#0E1117",
-            font_color="white",
-            xaxis_rangeslider_visible=False
-        )
+Key Signals:
+• Momentum Score: {top_stock['score']}
+• Relative Volume: {top_stock['rvol']}x
+• Momentum State: {top_stock['state']}
+• Sector: {top_stock['sector']}
+• Breakout Strength: {top_stock['breakout']}%
+"""
 
-        st.plotly_chart(
-            chart_fig,
-            use_container_width=True
-        )
-
-    # =================================================
-    # AI STYLE INSIGHTS
-    # =================================================
-
-    st.subheader("🧠 Momentum Insights")
-
-    top_stock = momentum_df.iloc[0]
-
-    insight_text = f"""
-    {top_stock['stock']} is currently leading the momentum ranking.
-
-    Key Signals:
-    • Momentum Score: {top_stock['score']}
-    • Relative Volume: {top_stock['rvol']}x
-    • Momentum State: {top_stock['state']}
-    • Sector: {top_stock['sector']}
-    • Breakout Strength: {top_stock['breakout']}%
-    """
-
-    st.info(insight_text)
-
-else:
-
-    st.warning("No stock data available.")
+st.info(insight_text)
 
 # =====================================================
 # FOOTER
@@ -477,5 +476,5 @@ else:
 st.markdown("---")
 
 st.caption(
-    "NSE Momentum Radar • Swing Trading Analytics Dashboard"
+    "NSE Momentum Radar • Swing Trading Dashboard"
 )
